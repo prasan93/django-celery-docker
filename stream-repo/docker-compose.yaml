@@ -1,0 +1,55 @@
+version : "3.9.7"
+
+services:
+
+    pgdb:
+        image: postgres
+        container_name: pgdb
+        environment:
+            - POSTGRES_DB=postgresdatabase
+            - POSTGRES_USER=streamuser
+            - POSTGRES_PASSWORD=@sdojdew90u3@LK
+        volumes:
+            - pgdata:/home/prasanr/var/lib/postgresql/data
+
+    redis:
+        image: redis:buster
+        container_name: redis
+
+
+    django:
+        build: .
+        container_name: django
+        command: python manage.py runserver  0.0.0.0:8000
+        volumes:
+            - .:/home/prasanr/Desktop/django-celery/stream-repo/
+        ports:
+            - "8000:8000"
+        environment:
+            - DEBUG=1
+            - DJANGO_ALLOWED_HOSTS=localhost 127.0.0.1 [::1]
+            - CELERY_BROKER=redis://redis:6379/0
+            - CELERY_BACKEND=redis://redis:6379/0
+        depends_on:
+            - pgdb
+            - redis
+    celery:
+        build: 
+            context: .
+        # restart: always
+        command: celery -A stream_platform_delta worker -l INFO
+        volumes:
+            - .:/home/prasanr/Desktop/django-celery/stream-repo/
+        environment:
+            - DEBUG=1
+            - DJANGO_ALLOWED_HOSTS=localhost 127.0.0.1 [::1]
+            - CELERY_BROKER=redis://redis:6379/0
+            - CELERY_BACKEND=redis://redis:6379/0
+        container_name: celery    
+        depends_on:
+            - django
+            - redis
+            - pgdb
+        
+volumes:
+    pgdata:
